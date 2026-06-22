@@ -415,7 +415,7 @@ func (c *criService) containerSpecOpts(config *runtime.ContainerConfig, imageCon
 		specOpts = append(specOpts, seccompSpecOpts)
 	}
 	if c.config.EnableCDI {
-		specOpts = append(specOpts, customopts.WithCDI(config.Annotations, config.CDIDevices))
+		specOpts = append(specOpts, customopts.WithCDI(config.Annotations))
 	}
 	return specOpts, nil
 }
