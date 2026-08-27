@@ -17,6 +17,7 @@ require (
 	github.com/containerd/errdefs v1.0.0
 	github.com/containerd/errdefs/pkg v0.3.0
 	github.com/containerd/fifo v1.1.0
+	github.com/containerd/fuse-overlayfs-snapshotter/v2 v2.1.7
 	github.com/containerd/go-cni v1.1.13
 	github.com/containerd/go-runc v1.1.0
 	github.com/containerd/imgcrypt/v2 v2.0.1
@@ -25,6 +26,7 @@ require (
 	github.com/containerd/otelttrpc v0.1.0
 	github.com/containerd/platforms v1.0.0-rc.2
 	github.com/containerd/plugin v1.0.0
+	github.com/containerd/stargz-snapshotter v0.18.2
 	github.com/containerd/ttrpc v1.2.7
 	github.com/containerd/typeurl/v2 v2.2.3
 	github.com/containerd/zfs/v2 v2.0.0
@@ -57,6 +59,7 @@ require (
 	github.com/opencontainers/runtime-spec v1.3.0
 	github.com/opencontainers/runtime-tools v0.9.1-0.20251114084447-edf4cb3d2116
 	github.com/opencontainers/selinux v1.13.1
+	github.com/pdtpartners/nix-snapshotter v0.4.0
 	github.com/pelletier/go-toml/v2 v2.2.4
 	github.com/prometheus/client_golang v1.23.2
 	github.com/sirupsen/logrus v1.9.3
@@ -83,9 +86,9 @@ require (
 	google.golang.org/grpc v1.78.0
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af
 	gopkg.in/inf.v0 v0.9.1
-	k8s.io/apimachinery v0.34.10
-	k8s.io/client-go v0.34.10
-	k8s.io/cri-api v0.34.10
+	k8s.io/apimachinery v0.34.12
+	k8s.io/client-go v0.34.12
+	k8s.io/cri-api v0.34.12
 	k8s.io/klog/v2 v2.130.1
 	tags.cncf.io/container-device-interface v1.1.0
 )
@@ -151,7 +154,7 @@ require (
 	golang.org/x/text v0.38.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20251029180050-ab9386a59fda // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.34.10 // indirect
+	k8s.io/api v0.34.12 // indirect
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397 // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect

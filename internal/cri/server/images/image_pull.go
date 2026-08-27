@@ -56,6 +56,15 @@ import (
 	"github.com/containerd/containerd/v2/pkg/tracing"
 )
 
+var (
+	// dockerAliases contains a map of historical aliases for registry-1.docker.io
+	dockerAliases = map[string]bool{
+		"docker.io":            true,
+		"index.docker.io":      true,
+		"registry-1.docker.io": true,
+	}
+)
+
 // For image management:
 // 1) We have an in-memory metadata index to:
 //   a. Maintain ImageID -> RepoTags, ImageID -> RepoDigset relationships; ImageID
@@ -105,9 +114,11 @@ func (c *GRPCCRIImageService) PullImage(ctx context.Context, r *runtime.PullImag
 	credentials := func(host string) (string, string, error) {
 		hostauth := r.GetAuth()
 		if hostauth == nil {
-			config := c.config.Registry.Configs[host]
-			if config.Auth != nil {
-				hostauth = toRuntimeAuthConfig(*config.Auth)
+			for _, host := range getHosts(host) {
+				if config := c.config.Registry.Configs[host]; config.Auth != nil {
+					hostauth = toRuntimeAuthConfig(*config.Auth)
+					break
+				}
 			}
 		}
 		return ParseAuth(hostauth, host)
@@ -140,10 +151,11 @@ func (c *CRIImageService) PullImage(ctx context.Context, name string, credential
 		credentials = func(host string) (string, string, error) {
 			var hostauth *runtime.AuthConfig
 
-			config := c.config.Registry.Configs[host]
-			if config.Auth != nil {
-				hostauth = toRuntimeAuthConfig(*config.Auth)
-
+			for _, host := range getHosts(host) {
+				if config := c.config.Registry.Configs[host]; config.Auth != nil {
+					hostauth = toRuntimeAuthConfig(*config.Auth)
+					break
+				}
 			}
 
 			return ParseAuth(hostauth, host)
@@ -341,7 +353,7 @@ func ParseAuth(auth *runtime.AuthConfig, host string) (string, string, error) {
 		if err != nil {
 			return "", "", fmt.Errorf("parse server address: %w", err)
 		}
-		if host != u.Host {
+		if host != u.Host && !dockerAliases[host] && !dockerAliases[u.Host] {
 			return "", "", nil
 		}
 	}
@@ -505,6 +517,10 @@ func (c *CRIImageService) registryHosts(ctx context.Context, credentials func(ho
 	return func(host string) ([]docker.RegistryHost, error) {
 		var registries []docker.RegistryHost
 
+		rewrites, err := c.registryRewrites(host)
+		if err != nil {
+			return nil, fmt.Errorf("get registry rewrites: %w", err)
+		}
 		endpoints, err := c.registryEndpoints(host)
 		if err != nil {
 			return nil, fmt.Errorf("get registry endpoints: %w", err)
@@ -518,7 +534,6 @@ func (c *CRIImageService) registryHosts(ctx context.Context, credentials func(ho
 			var (
 				transport = docker.DefaultHTTPTransport(nil) // no tls config
 				client    = &http.Client{Transport: transport}
-				config    = c.config.Registry.Configs[u.Host]
 			)
 
 			if docker.IsLocalhost(host) && u.Scheme == "http" {
@@ -531,10 +546,15 @@ func (c *CRIImageService) registryHosts(ctx context.Context, credentials func(ho
 			// Make a copy of `credentials`, so that different authorizers would not reference
 			// the same credentials variable.
 			credentials := credentials
-			if credentials == nil && config.Auth != nil {
-				auth := toRuntimeAuthConfig(*config.Auth)
-				credentials = func(host string) (string, string, error) {
-					return ParseAuth(auth, host)
+			if credentials == nil {
+				for _, host := range getHosts(u.Host) {
+					if config := c.config.Registry.Configs[host]; config.Auth != nil {
+						auth := toRuntimeAuthConfig(*config.Auth)
+						credentials = func(host string) (string, string, error) {
+							return ParseAuth(auth, host)
+						}
+						break
+					}
 				}
 			}
 
@@ -561,10 +581,21 @@ func (c *CRIImageService) registryHosts(ctx context.Context, credentials func(ho
 				Scheme:       u.Scheme,
 				Path:         u.Path,
 				Capabilities: docker.HostCapabilityResolve | docker.HostCapabilityPull | docker.HostCapabilityReferrers,
+				Rewrites:     rewrites,
 			})
 		}
 		return registries, nil
 	}
+}
+
+// getHosts returns a list of host aliases for a given registry,
+// for the purposes of backward compatibility.
+func getHosts(host string) []string {
+	hosts := []string{host}
+	if host == "registry-1.docker.io" {
+		hosts = append(hosts, "docker.io", "index.docker.io")
+	}
+	return hosts
 }
 
 // toRuntimeAuthConfig converts cri plugin auth config to runtime auth config.
@@ -631,6 +662,16 @@ func (c *CRIImageService) registryEndpoints(host string) ([]string, error) {
 		}
 	}
 	return append(endpoints, defaultScheme(defaultHost)+"://"+defaultHost), nil
+}
+
+func (c *CRIImageService) registryRewrites(host string) (map[string]string, error) {
+	hosts := []string{host, "*"}
+	for _, host := range hosts {
+		if host, ok := c.config.Registry.Mirrors[host]; ok {
+			return host.Rewrites, nil
+		}
+	}
+	return nil, nil
 }
 
 // encryptedImagesPullOpts returns the necessary list of pull options required
