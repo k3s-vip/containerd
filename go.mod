@@ -83,9 +83,9 @@ require (
 	google.golang.org/grpc v1.78.0
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af
 	gopkg.in/inf.v0 v0.9.1
-	k8s.io/apimachinery v0.34.10
-	k8s.io/client-go v0.34.10
-	k8s.io/cri-api v0.34.10
+	k8s.io/apimachinery v0.34.11
+	k8s.io/client-go v0.34.11
+	k8s.io/cri-api v0.34.11
 	k8s.io/klog/v2 v2.130.1
 	tags.cncf.io/container-device-interface v1.1.0
 )
@@ -151,7 +151,7 @@ require (
 	golang.org/x/text v0.38.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20251029180050-ab9386a59fda // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.34.10 // indirect
+	k8s.io/api v0.34.11 // indirect
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397 // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
