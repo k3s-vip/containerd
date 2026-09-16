@@ -89,7 +89,11 @@ func (c *criService) CreateContainer(ctx context.Context, r *runtime.CreateConta
 		return nil, errors.New("container config must include metadata")
 	}
 	containerName := metadata.Name
-	name := makeContainerName(metadata, sandboxConfig.GetMetadata())
+	sandboxMetadata := sandboxConfig.GetMetadata()
+	if sandboxMetadata == nil {
+		return nil, errors.New("pod sandbox config must include metadata")
+	}
+	name := makeContainerName(metadata, sandboxMetadata)
 	log.G(ctx).Debugf("Generated id %q for container %q", id, name)
 	if err = c.containerNameIndex.Reserve(name, id); err != nil {
 		var resErr *registrar.ReservedErr
@@ -759,7 +763,7 @@ func (c *criService) buildLinuxSpec(
 	// can override them.
 	env := append([]string{}, imageConfig.Env...)
 	for _, e := range config.GetEnvs() {
-		env = append(env, e.GetKey()+"="+e.GetValue())
+		env = append(env, e.GetKey()+"="+string(e.GetValue()))
 	}
 	specOpts = append(specOpts, oci.WithEnv(env))
 
@@ -976,7 +980,7 @@ func (c *criService) buildWindowsSpec(
 	// can override them.
 	env := append([]string{}, imageConfig.Env...)
 	for _, e := range config.GetEnvs() {
-		env = append(env, e.GetKey()+"="+e.GetValue())
+		env = append(env, e.GetKey()+"="+string(e.GetValue()))
 	}
 	specOpts = append(specOpts, oci.WithEnv(env))
 
@@ -1061,7 +1065,7 @@ func (c *criService) buildDarwinSpec(
 	// can override them.
 	env := append([]string{}, imageConfig.Env...)
 	for _, e := range config.GetEnvs() {
-		env = append(env, e.GetKey()+"="+e.GetValue())
+		env = append(env, e.GetKey()+"="+string(e.GetValue()))
 	}
 	specOpts = append(specOpts, oci.WithEnv(env))
 

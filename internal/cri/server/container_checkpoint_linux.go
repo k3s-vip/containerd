@@ -308,6 +308,17 @@ func (c *criService) CRImportCheckpoint(
 		if err := mount.All(mounts, mountPoint); err != nil {
 			return "", err
 		}
+		// Release the read-only snapshot mount on every return path. Without
+		// this, any error after this point (e.g. the failed anonymous pull of
+		// the checkpoint base image) leaks the mount permanently; the deferred
+		// os.RemoveAll above cannot remove a mounted directory. UnmountAll is a
+		// no-op once the mount is gone, so the explicit UnmountAll on the
+		// success path below is unaffected.
+		defer func() {
+			if err := mount.UnmountAll(mountPoint, 0); err != nil {
+				log.G(ctx).WithError(err).Warnf("failed to unmount %s after checkpoint restore", mountPoint)
+			}
+		}()
 	} else {
 
 		archiveFile, err = os.Open(inputImage)
@@ -443,9 +454,15 @@ func (c *criService) CRImportCheckpoint(
 	// checkpoint archive as NAME@DIGEST. The checkpoint archive also contains
 	// the tag with which it was initially pulled.
 	// First step is to pull NAME@DIGEST
-	containerdImage, err := c.client.Pull(ctx, config.RootfsImageRef)
+	containerdImage, err := c.client.GetImage(ctx, config.RootfsImageRef)
 	if err != nil {
-		return "", fmt.Errorf("failed to pull checkpoint base image %s: %w", config.RootfsImageRef, err)
+		if !errdefs.IsNotFound(err) {
+			return "", fmt.Errorf("failed to get checkpoint base image %s: %w", config.RootfsImageRef, err)
+		}
+		containerdImage, err = c.client.Pull(ctx, config.RootfsImageRef)
+		if err != nil {
+			return "", fmt.Errorf("failed to pull checkpoint base image %s: %w", config.RootfsImageRef, err)
+		}
 	}
 	if _, err := reference.ParseAnyReference(config.RootfsImageName); err != nil {
 		return "", fmt.Errorf("error parsing reference: %q is not a valid repository/tag %v", config.RootfsImageName, err)
@@ -468,7 +485,7 @@ func (c *criService) CRImportCheckpoint(
 	imageConfig := image.ImageSpec.Config
 	env := append([]string{}, imageConfig.Env...)
 	for _, e := range meta.Config.GetEnvs() {
-		env = append(env, e.GetKey()+"="+e.GetValue())
+		env = append(env, e.GetKey()+"="+string(e.GetValue()))
 	}
 	imageConfig.Env = append(imageConfig.Env, env...)
 
