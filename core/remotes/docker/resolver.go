@@ -565,12 +565,12 @@ func (r *request) addNamespace(ns string) (err error) {
 	}
 	var q url.Values
 	// Parse query
-	if i := strings.IndexByte(r.path, '?'); i > 0 {
-		r.path = r.path[:i+1]
-		q, err = url.ParseQuery(r.path[i+1:])
+	if p, query, ok := strings.Cut(r.path, "?"); ok {
+		q, err = url.ParseQuery(query)
 		if err != nil {
 			return
 		}
+		r.path = p + "?"
 	} else {
 		r.path = r.path + "?"
 		q = url.Values{}

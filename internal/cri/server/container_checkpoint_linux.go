@@ -443,9 +443,15 @@ func (c *criService) CRImportCheckpoint(
 	// checkpoint archive as NAME@DIGEST. The checkpoint archive also contains
 	// the tag with which it was initially pulled.
 	// First step is to pull NAME@DIGEST
-	containerdImage, err := c.client.Pull(ctx, config.RootfsImageRef)
+	containerdImage, err := c.client.GetImage(ctx, config.RootfsImageRef)
 	if err != nil {
-		return "", fmt.Errorf("failed to pull checkpoint base image %s: %w", config.RootfsImageRef, err)
+		if !errdefs.IsNotFound(err) {
+			return "", fmt.Errorf("failed to get checkpoint base image %s: %w", config.RootfsImageRef, err)
+		}
+		containerdImage, err = c.client.Pull(ctx, config.RootfsImageRef)
+		if err != nil {
+			return "", fmt.Errorf("failed to pull checkpoint base image %s: %w", config.RootfsImageRef, err)
+		}
 	}
 	if _, err := reference.ParseAnyReference(config.RootfsImageName); err != nil {
 		return "", fmt.Errorf("error parsing reference: %q is not a valid repository/tag %v", config.RootfsImageName, err)
@@ -468,7 +474,7 @@ func (c *criService) CRImportCheckpoint(
 	imageConfig := image.ImageSpec.Config
 	env := append([]string{}, imageConfig.Env...)
 	for _, e := range meta.Config.GetEnvs() {
-		env = append(env, e.GetKey()+"="+e.GetValue())
+		env = append(env, e.GetKey()+"="+string(e.GetValue()))
 	}
 	imageConfig.Env = append(imageConfig.Env, env...)
 
